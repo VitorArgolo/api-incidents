@@ -2,18 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const sqlite3 = require('sqlite3').verbose();
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = 'secreto'; 
 
-
 app.use(cors());
 app.use(express.json());
 
-
 const db = new sqlite3.Database(':memory:');
-
 
 db.serialize(() => {
   db.run(`CREATE TABLE incidents (
@@ -24,7 +22,6 @@ db.serialize(() => {
     severity TEXT
   )`);
 });
-
 
 const authenticateJWT = (req, res, next) => {
   const token = req.headers.authorization;
@@ -42,10 +39,22 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
+// Middleware para registrar atividades e enviar logs para a API de monitoramento
+app.use((req, res, next) => {
+    const logMessage = `Request made: ${req.method} ${req.url}`;
+    axios.post('https://api-monitoramento-1.onrender.com/log', { message: logMessage })
+        .then(response => {
+            console.log('Log sent to monitoring API:', response.data);
+            next();
+        })
+        .catch(error => {
+            console.error('Error sending log to monitoring API:', error.message);
+            next();
+        });
+});
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-
 
   if (username === 'admin' && password === 'admin') {
     const token = jwt.sign({ username }, SECRET_KEY);
@@ -55,9 +64,7 @@ app.post('/login', (req, res) => {
   }
 });
 
-
 app.get('/incidents', authenticateJWT, (req, res) => {
-
   db.all('SELECT * FROM incidents', (err, rows) => {
     if (err) {
       res.status(500).json({ error: err.message });
@@ -66,7 +73,6 @@ app.get('/incidents', authenticateJWT, (req, res) => {
     res.json(rows);
   });
 });
-
 
 app.post('/incidents', authenticateJWT, (req, res) => {
   const { title, description, leak, severity } = req.body;
@@ -87,7 +93,6 @@ app.post('/incidents', authenticateJWT, (req, res) => {
     });
   });
 });
-
 
 app.put('/incidents/:id', authenticateJWT, (req, res) => {
   const { id } = req.params;
@@ -123,14 +128,6 @@ app.delete('/incidents/:id', authenticateJWT, (req, res) => {
   });
 });
 
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-const os = require('os');
-
-
 app.get('/server-info', (req, res) => {
   const serverInfo = {
     hostname: os.hostname(),
@@ -140,8 +137,11 @@ app.get('/server-info', (req, res) => {
     loadAverage: os.loadavg(),
     cpus: os.cpus(),
     networkInterfaces: os.networkInterfaces()
-   
   };
 
   res.json(serverInfo);
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
