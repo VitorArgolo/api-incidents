@@ -6,7 +6,7 @@ const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET_KEY = 'secreto'; 
+const SECRET_KEY = 'secreto';
 
 app.use(cors());
 app.use(express.json());
@@ -19,7 +19,9 @@ db.serialize(() => {
     title TEXT,
     description TEXT,
     leak TEXT,
-    severity TEXT
+    severity TEXT,
+    IdResolvedor INTEGER DEFAULT 'admin',
+    NomeResolvedor TEXT DEFAULT 'admin'
   )`);
 });
 
@@ -75,9 +77,9 @@ app.get('/incidents', authenticateJWT, (req, res) => {
 });
 
 app.post('/incidents', authenticateJWT, (req, res) => {
-  const { title, description, leak, severity } = req.body;
-  const sql = 'INSERT INTO incidents (title, description, leak, severity) VALUES (?, ?, ?, ?)';
-  const params = [title, description, leak, severity];
+  const { title, description, leak, severity, IdResolvedor = 'admin', NomeResolvedor = 'admin' } = req.body;
+  const sql = 'INSERT INTO incidents (title, description, leak, severity, IdResolvedor, NomeResolvedor) VALUES (?, ?, ?, ?, ?, ?)';
+  const params = [title, description, leak, severity, IdResolvedor, NomeResolvedor];
 
   db.run(sql, params, function(err) {
     if (err) {
@@ -89,16 +91,18 @@ app.post('/incidents', authenticateJWT, (req, res) => {
       title,
       description,
       leak,
-      severity
+      severity,
+      IdResolvedor,
+      NomeResolvedor
     });
   });
 });
 
 app.put('/incidents/:id', authenticateJWT, (req, res) => {
   const { id } = req.params;
-  const { title, description, leak, severity } = req.body;
-  const sql = 'UPDATE incidents SET title = ?, description = ?, leak = ?, severity = ? WHERE id = ?';
-  const params = [title, description, leak, severity, id];
+  const { title, description, leak, severity, IdResolvedor, NomeResolvedor } = req.body;
+  const sql = 'UPDATE incidents SET title = ?, description = ?, leak = ?, severity = ?, IdResolvedor = COALESCE(?, IdResolvedor), NomeResolvedor = COALESCE(?, NomeResolvedor) WHERE id = ?';
+  const params = [title, description, leak, severity, IdResolvedor, NomeResolvedor, id];
 
   db.run(sql, params, function(err) {
     if (err) {
@@ -110,7 +114,9 @@ app.put('/incidents/:id', authenticateJWT, (req, res) => {
       title,
       description,
       leak,
-      severity
+      severity,
+      IdResolvedor,
+      NomeResolvedor
     });
   });
 });
