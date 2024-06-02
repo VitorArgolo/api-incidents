@@ -149,6 +149,28 @@ app.get('/server-info', (req, res) => {
   res.json(serverInfo);
 });
 
+app.get('/status', (req, res) => {
+  const status = {
+      serverStatus: 'Online'
+  };
+  res.json(status);
+});
+
+app.get('/cpu', (req, res) => {
+  const cpuUsage = {
+      cpuUsage: os.loadavg()[0]
+  };
+  res.json(cpuUsage);
+});
+
+app.get('/memory', (req, res) => {
+  const memoryUsage = {
+      totalMemory: os.totalmem(),
+      freeMemory: os.freemem()
+  };
+  res.json(memoryUsage);
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
