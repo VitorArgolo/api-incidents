@@ -122,6 +122,7 @@ app.put('/incidents/:id', authenticateJWT, (req, res) => {
   });
 });
 
+
 app.delete('/incidents/:id', authenticateJWT, (req, res) => {
   const { id } = req.params;
   const sql = 'DELETE FROM incidents WHERE id = ?';
