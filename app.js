@@ -136,13 +136,12 @@ app.delete('/incidents/:id', authenticateJWT, (req, res) => {
 
 app.get('/server-info', (req, res) => {
   const serverInfo = {
-    hostname: os.hostname(),
-    uptime: os.uptime(),
-    totalMemory: os.totalmem(),
-    freeMemory: os.freemem(),
-    loadAverage: os.loadavg(),
-    cpus: os.cpus(),
-    networkInterfaces: os.networkInterfaces()
+    cpuUsage: os.loadavg(), // Uso médio da CPU nos últimos 1, 5 e 15 minutos
+    totalMemory: os.totalmem(), // Memória total do sistema em bytes
+    freeMemory: os.freemem(), // Memória livre do sistema em bytes
+    memoryUsage: process.memoryUsage(), // Uso de memória da aplicação Node.js
+    cpus: os.cpus(), // Informações sobre os núcleos do CPU
+    networkInterfaces: os.networkInterfaces() // Informações sobre interfaces de rede
   };
 
   res.json(serverInfo);
