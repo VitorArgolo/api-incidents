@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
+const { Client } = require('pg');
 const axios = require('axios');
 const os = require('os');
 
@@ -12,19 +12,16 @@ const SECRET_KEY = 'secreto';
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database(':memory:');
-
-db.serialize(() => {
-  db.run(`CREATE TABLE incidents (
-    id INTEGER PRIMARY KEY,
-    title TEXT,
-    description TEXT,
-    leak TEXT,
-    severity TEXT,
-    IdResolvedor INTEGER DEFAULT 'admin',
-    NomeResolvedor TEXT DEFAULT 'admin'
-  )`);
+const client = new Client({
+  connectionString: 'postgres://pipeguard:kg2od1Ym78w8PXgr4XAjF6CEMosPfe47@dpg-cp0op4njbltc73e12nqg-a.oregon-postgres.render.com/monitoramento_a2ud',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+client.connect()
+  .then(() => console.log('Conectado ao PostgreSQL com sucesso'))
+  .catch(err => console.error('Erro na conexão com PostgreSQL', err));
 
 const authenticateJWT = (req, res, next) => {
   const token = req.headers.authorization;
@@ -42,18 +39,17 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
-// Middleware para registrar atividades e enviar logs para a API de monitoramento
 app.use((req, res, next) => {
-    const logMessage = `Request made: ${req.method} ${req.url}`;
-    axios.post('https://api-monitoramento-1.onrender.com/log', { message: logMessage })
-        .then(response => {
-            console.log('Log sent to monitoring API:', response.data);
-            next();
-        })
-        .catch(error => {
-            console.error('Error sending log to monitoring API:', error.message);
-            next();
-        });
+  const logMessage = `Request made: ${req.method} ${req.url}`;
+  axios.post('https://api-monitoramento-1.onrender.com/log', { message: logMessage })
+    .then(response => {
+      console.log('Log sent to monitoring API:', response.data);
+      next();
+    })
+    .catch(error => {
+      console.error('Error sending log to monitoring API:', error.message);
+      next();
+    });
 });
 
 app.post('/login', (req, res) => {
@@ -68,71 +64,54 @@ app.post('/login', (req, res) => {
 });
 
 app.get('/incidents', authenticateJWT, (req, res) => {
-  db.all('SELECT * FROM incidents', (err, rows) => {
+  client.query('SELECT * FROM incidents', (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.json(rows);
+    res.json(result.rows);
   });
 });
 
 app.post('/incidents', authenticateJWT, (req, res) => {
   const { title, description, leak, severity, IdResolvedor = 'admin', NomeResolvedor = 'admin' } = req.body;
-  const sql = 'INSERT INTO incidents (title, description, leak, severity, IdResolvedor, NomeResolvedor) VALUES (?, ?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO incidents (title, description, leak, severity, IdResolvedor, NomeResolvedor) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *';
   const params = [title, description, leak, severity, IdResolvedor, NomeResolvedor];
 
-  db.run(sql, params, function(err) {
+  client.query(sql, params, (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.status(201).json({
-      id: this.lastID,
-      title,
-      description,
-      leak,
-      severity,
-      IdResolvedor,
-      NomeResolvedor
-    });
+    res.status(201).json(result.rows[0]);
   });
 });
 
 app.put('/incidents/:id', authenticateJWT, (req, res) => {
   const { id } = req.params;
   const { title, description, leak, severity, IdResolvedor, NomeResolvedor } = req.body;
-  const sql = 'UPDATE incidents SET title = ?, description = ?, leak = ?, severity = ?, IdResolvedor = COALESCE(?, IdResolvedor), NomeResolvedor = COALESCE(?, NomeResolvedor) WHERE id = ?';
+  const sql = 'UPDATE incidents SET title = $1, description = $2, leak = $3, severity = $4, IdResolvedor = COALESCE($5, IdResolvedor), NomeResolvedor = COALESCE($6, NomeResolvedor) WHERE id = $7 RETURNING *';
   const params = [title, description, leak, severity, IdResolvedor, NomeResolvedor, id];
 
-  db.run(sql, params, function(err) {
+  client.query(sql, params, (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.json({
-      id: parseInt(id),
-      title,
-      description,
-      leak,
-      severity,
-      IdResolvedor,
-      NomeResolvedor
-    });
+    res.json(result.rows[0]);
   });
 });
 
-
 app.delete('/incidents/:id', authenticateJWT, (req, res) => {
   const { id } = req.params;
-  const sql = 'DELETE FROM incidents WHERE id = ?';
+  const sql = 'DELETE FROM incidents WHERE id = $1 RETURNING *';
 
-  db.run(sql, id, function(err) {
+  client.query(sql, [id], (err, result) => {
     if (err) {
       res.status(500).json({ error: err.message });
       return;
     }
-    res.json({ message: 'Incident deleted successfully' });
+    res.json({ message: 'Incident deleted successfully', deleted: result.rows[0] });
   });
 });
 
