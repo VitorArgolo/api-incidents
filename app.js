@@ -12,12 +12,21 @@ const SECRET_KEY = 'secreto';
 app.use(cors());
 app.use(express.json());
 
+
+// Conexão com o banco de dados PostgreSQL
 const client = new Client({
   connectionString: 'postgres://pipeguard:kg2od1Ym78w8PXgr4XAjF6CEMosPfe47@dpg-cp0op4njbltc73e12nqg-a.oregon-postgres.render.com/monitoramento_a2ud',
   ssl: {
     rejectUnauthorized: false
   }
 });
+client.connect()
+  .then(() => {
+    console.log('Conectado ao banco de dados PostgreSQL');
+  })
+  .catch(err => {
+    console.error('Erro na conexão com o banco de dados PostgreSQL', err);
+  });
 
 const createTableIfNotExists = async () => {
   try {
