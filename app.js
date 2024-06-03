@@ -53,9 +53,7 @@ client.connect()
 
 createTableIfNotExists(client);
 
-client.connect()
-  .then(() => console.log('Conectado ao PostgreSQL com sucesso'))
-  .catch(err => console.error('Erro na conexão com PostgreSQL', err));
+
 
 const authenticateJWT = (req, res, next) => {
   const token = req.headers.authorization;
