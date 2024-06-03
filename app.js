@@ -19,6 +19,31 @@ const client = new Client({
   }
 });
 
+const createTableIfNotExists = async () => {
+  try {
+    await client.connect();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS incidents (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        leak BOOLEAN,
+        severity VARCHAR(50),
+        IdResolvedor VARCHAR(50),
+        NomeResolvedor VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela incidents verificada/criada com sucesso.');
+  } catch (error) {
+    console.error('Erro ao verificar/criar a tabela incidents:', error.message);
+  } finally {
+    await client.end();
+  }
+};
+
+createTableIfNotExists();
+
 client.connect()
   .then(() => console.log('Conectado ao PostgreSQL com sucesso'))
   .catch(err => console.error('Erro na conexão com PostgreSQL', err));
