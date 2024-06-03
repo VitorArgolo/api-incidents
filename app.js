@@ -51,7 +51,7 @@ client.connect()
     }
   };
 
-createTableIfNotExists();
+createTableIfNotExists(client);
 
 client.connect()
   .then(() => console.log('Conectado ao PostgreSQL com sucesso'))
