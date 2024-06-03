@@ -28,28 +28,28 @@ client.connect()
     console.error('Erro na conexão com o banco de dados PostgreSQL', err);
   });
 
-const createTableIfNotExists = async () => {
-  try {
-    await client.connect();
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS incidents (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        leak BOOLEAN,
-        severity VARCHAR(50),
-        IdResolvedor VARCHAR(50),
-        NomeResolvedor VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Tabela incidents verificada/criada com sucesso.');
-  } catch (error) {
-    console.error('Erro ao verificar/criar a tabela incidents:', error.message);
-  } finally {
-    await client.end();
-  }
-};
+  const createTableIfNotExists = async (client) => {
+    try {
+      if (!client._connected) {
+        await client.connect();
+      }
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS incidents (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          leak BOOLEAN,
+          severity VARCHAR(50),
+          IdResolvedor VARCHAR(50),
+          NomeResolvedor VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('Tabela incidents verificada/criada com sucesso.');
+    } catch (error) {
+      console.error('Erro ao verificar/criar a tabela incidents:', error.message);
+    }
+  };
 
 createTableIfNotExists();
 
